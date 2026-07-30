@@ -31,13 +31,19 @@ public class EmergencyProfileTest {
     @MockBean
     private AuthService authService;
 
-    private User testUser;
-
     @Autowired
     private com.swasuraksha.repository.SOSAlertRepository sosAlertRepository;
 
+    @Autowired
+    private org.springframework.web.context.WebApplicationContext wac;
+
+    private org.springframework.test.web.servlet.MockMvc mockMvc;
+
+    private User testUser;
+
     @BeforeEach
     public void setup() {
+        mockMvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(wac).build();
         sosAlertRepository.deleteAll();
         profileRepository.deleteAll();
         userRepository.deleteAll();
@@ -87,5 +93,14 @@ public class EmergencyProfileTest {
         assertEquals("John Doe", publicCard.get("fullName"));
         assertEquals("O-", publicCard.get("bloodType"));
         assertTrue(publicCard.get("allergies").toString().contains("Peanut Allergy"));
+    }
+
+    @Test
+    public void testRestControllerPutRequest() throws Exception {
+        String jsonPayload = "{\"bloodType\":\"O-\",\"allergies\":\"None\",\"medicalConditions\":\"None\",\"currentMedications\":\"None\",\"emergencyInstructions\":\"None\"}";
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/emergency/profile")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(jsonPayload))
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
     }
 }
