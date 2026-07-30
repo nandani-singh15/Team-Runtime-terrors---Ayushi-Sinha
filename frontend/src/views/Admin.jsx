@@ -7,6 +7,7 @@ const Admin = () => {
   const [stats, setStats] = useState(null);
   const [reports, setReports] = useState([]);
   const [feedback, setFeedback] = useState([]);
+  const [accessLogs, setAccessLogs] = useState([]);
   
   // SafePoint Seeder Form State
   const [name, setName] = useState('');
@@ -37,6 +38,12 @@ const Admin = () => {
       if (feedbackRes.data.success) {
         setFeedback(feedbackRes.data.data);
       }
+
+      // 4. Fetch admin accountability access logs
+      const logsRes = await API.get('/admin/access-logs');
+      if (logsRes.data.success) {
+        setAccessLogs(logsRes.data.data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -56,7 +63,7 @@ const Admin = () => {
         alert(`Report status updated to ${status}`);
       }
     } catch (err) {
-      alert("Moderation failed: " + err.message);
+      alert("Moderate failed: " + err.message);
     }
   };
 
@@ -142,10 +149,45 @@ const Admin = () => {
       )}
 
       <div className="row g-4">
-        {/* Left Column: Community Incident Reports and Tickets */}
+        {/* Left Column: Community Incident Reports, Accountability logs and Tickets */}
         <div className="col-lg-8">
           <div className="d-flex flex-column gap-4">
             
+            {/* Admin Access Audit Logs Card */}
+            <GlassCard>
+              <h5 className="text-white fw-bold mb-3 d-flex align-items-center gap-2">
+                <FiShield className="text-cyan" style={{ color: '#00f2fe' }} /> Paramedic Profile Access Audits (Accountability)
+              </h5>
+              <p className="text-muted small mb-3">Immutable access logs generated every time emergency medical data is queried by an administrator.</p>
+              
+              {accessLogs.length > 0 ? (
+                <div className="table-responsive" style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                  <table className="table table-dark table-striped table-hover m-0" style={{ fontSize: '0.8rem', background: 'transparent' }}>
+                    <thead>
+                      <tr>
+                        <th>Admin Email</th>
+                        <th>User Profile</th>
+                        <th>Action Log</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accessLogs.map((log) => (
+                        <tr key={log.id}>
+                          <td className="text-cyan" style={{ color: '#00f2fe' }}>{log.adminUsername}</td>
+                          <td className="text-white fw-bold">{log.patientName}</td>
+                          <td className="text-muted">{log.reason}</td>
+                          <td className="text-white">{new Date(log.accessedAt).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-muted small text-center my-3">No medical profile audit logs recorded yet.</p>
+              )}
+            </GlassCard>
+
             {/* Reports Moderation Card */}
             <GlassCard>
               <h5 className="text-white fw-bold mb-3 d-flex align-items-center gap-2">

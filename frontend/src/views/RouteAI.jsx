@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import API from '../services/api';
 import GlassCard from '../components/GlassCard';
+import { useAuth } from '../context/AuthContext';
 import { FiMap, FiClock, FiCpu, FiTrendingUp, FiCheck, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
 
 const RouteAI = () => {
+  const { t } = useAuth();
+  
   const [startLoc, setStartLoc] = useState('University North Campus');
   const [endLoc, setEndLoc] = useState('Connaught Place Metro Station');
   const [startLat] = useState(28.6904);
@@ -247,6 +250,9 @@ const RouteAI = () => {
                       <span className="text-muted small">Safest Window</span>
                       <h5 className="text-cyan fw-bold m-0" style={{ color: '#00f2fe' }}>06:30 AM - 09:30 PM</h5>
                     </div>
+                  </div>
+                  <div className="mt-2 text-warning mb-2" style={{ fontSize: '0.7rem' }}>
+                    ⚠️ {t('confidenceDisclaimer')}
                   </div>
                   <p className="text-muted small m-0">{journey.safetyRouteExplanation}</p>
                 </div>

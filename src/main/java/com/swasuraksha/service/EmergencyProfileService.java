@@ -45,6 +45,9 @@ public class EmergencyProfileService {
     @Autowired
     private JourneyRepository journeyRepository;
 
+    @Autowired
+    private com.swasuraksha.repository.AdminAccessLogRepository adminAccessLogRepository;
+
     public EmergencyProfile getMyProfile() {
         User user = authService.getAuthenticatedUser();
         return profileRepository.findByUserId(user.getId())
@@ -119,6 +122,20 @@ public class EmergencyProfileService {
 
         User user = profile.getUser();
         
+        // Log access if performed by an administrator
+        try {
+            User requester = authService.getAuthenticatedUser();
+            if (requester != null && "ROLE_ADMIN".equalsIgnoreCase(requester.getRole())) {
+                com.swasuraksha.entity.AdminAccessLog log = com.swasuraksha.entity.AdminAccessLog.builder()
+                        .adminUsername(requester.getEmail())
+                        .patientName(user.getFullName())
+                        .accessedAt(LocalDateTime.now())
+                        .reason("Accessed medical card lookup via Admin panel")
+                        .build();
+                adminAccessLogRepository.save(log);
+            }
+        } catch (Exception ignored) {}
+
         // Security Lock check: only allow viewing if user has ACTIVE SOS alert or TIMEOUT_ALERT
         boolean hasActiveSos = sosAlertRepository.findByStatus("ACTIVE").stream()
                 .anyMatch(alert -> alert.getUser().getId().equals(user.getId()));

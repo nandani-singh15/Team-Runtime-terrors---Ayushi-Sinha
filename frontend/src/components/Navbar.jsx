@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiLogOut, FiUser, FiMap, FiShield, FiSliders, FiHelpCircle } from 'react-icons/fi';
+import { FiLogOut, FiUser, FiMap, FiShield, FiSliders, FiHelpCircle, FiGlobe } from 'react-icons/fi';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, language, toggleLanguage, t } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -42,38 +42,49 @@ const Navbar = () => {
 
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav ms-auto align-items-center gap-3 mt-3 mt-lg-0">
+            {/* Global Language Toggle */}
+            <li className="nav-item">
+              <button 
+                onClick={toggleLanguage}
+                className="btn btn-dark btn-sm text-cyan px-3 py-2 rounded-3 border border-secondary border-opacity-30 d-flex align-items-center gap-2"
+                style={{ color: '#00f2fe', background: 'rgba(255,255,255,0.02)' }}
+              >
+                <FiGlobe /> {language === 'en' ? 'हिन्दी' : 'English'}
+              </button>
+            </li>
+
             {user ? (
               <>
                 <li className="nav-item">
                   <Link className="nav-link d-flex align-items-center gap-2" to="/dashboard">
-                    <FiShield /> Dashboard
+                    <FiShield /> {t('dashboard')}
                   </Link>
                 </li>
                 <li className="nav-item">
                   <Link className="nav-link d-flex align-items-center gap-2" to="/route-ai">
-                    <FiMap /> Route AI
+                    <FiMap /> {t('routeAI')}
                   </Link>
                 </li>
                 <li className="nav-item">
                   <Link className="nav-link d-flex align-items-center gap-2" to="/profile">
-                    <FiUser /> QR Card
+                    <FiUser /> {t('qrCard')}
                   </Link>
                 </li>
                 <li className="nav-item">
                   <Link className="nav-link d-flex align-items-center gap-2" to="/contacts">
-                    <FiSliders /> Contacts
+                    <FiSliders /> {t('contacts')}
                   </Link>
                 </li>
                 {user.role === 'ROLE_ADMIN' && (
                   <li className="nav-item">
                     <Link className="nav-link text-warning d-flex align-items-center gap-2" to="/admin">
-                      <FiSliders /> Admin Panel
+                      <FiSliders /> {t('adminPanel')}
                     </Link>
                   </li>
                 )}
                 <li className="nav-item">
                   <Link className="nav-link d-flex align-items-center gap-2" to="/support">
-                    <FiHelpCircle /> Support
+                    <FiHelpCircle /> {t('support')}
                   </Link>
                 </li>
                 <li className="nav-item ms-lg-3">
@@ -81,7 +92,7 @@ const Navbar = () => {
                     onClick={handleLogout}
                     className="btn btn-premium btn-premium-outline py-2 px-3"
                   >
-                    <FiLogOut /> Logout
+                    <FiLogOut /> {t('logout')}
                   </button>
                 </li>
               </>
@@ -89,7 +100,7 @@ const Navbar = () => {
               <>
                 <li className="nav-item">
                   <Link className="nav-link d-flex align-items-center gap-2" to="/support">
-                    <FiHelpCircle /> Support
+                    <FiHelpCircle /> {t('support')}
                   </Link>
                 </li>
                 <li className="nav-item">

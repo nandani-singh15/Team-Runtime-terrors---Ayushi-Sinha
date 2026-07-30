@@ -37,11 +37,21 @@ public class AdminDashboardController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private com.swasuraksha.repository.AdminAccessLogRepository adminAccessLogRepository;
+
     private void checkAdminAccess() {
         User user = authService.getAuthenticatedUser();
         if (!"ROLE_ADMIN".equalsIgnoreCase(user.getRole())) {
             throw new RuntimeException("Access denied. Admin role required.");
         }
+    }
+
+    @GetMapping("/access-logs")
+    public ResponseEntity<ApiResponse> getAdminAccessLogs() {
+        checkAdminAccess();
+        List<AdminAccessLog> logs = adminAccessLogRepository.findAllByOrderByAccessedAtDesc();
+        return ResponseEntity.ok(new ApiResponse(true, "Admin accountability audit logs retrieved", logs));
     }
 
     @GetMapping("/stats")

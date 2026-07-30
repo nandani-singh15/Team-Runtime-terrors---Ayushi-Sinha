@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import API from '../services/api';
 import GlassCard from '../components/GlassCard';
 import { useAuth } from '../context/AuthContext';
-import { FiAlertOctagon, FiCompass, FiShield, FiBell, FiMapPin, FiPhoneCall, FiAlertTriangle } from 'react-icons/fi';
+import { FiAlertOctagon, FiCompass, FiShield, FiBell, FiMapPin, FiPhoneCall, FiAlertTriangle, FiPlus } from 'react-icons/fi';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, t } = useAuth();
   
   // Coordinates (Delhi center default)
   const [lat, setLat] = useState(28.6139);
@@ -20,6 +20,23 @@ const Dashboard = () => {
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [sosNotes, setSosNotes] = useState('');
   const [resolvingSos, setResolvingSos] = useState(false);
+
+  // SOS Hold and Cancel states
+  const [isHolding, setIsHolding] = useState(false);
+  const [holdPercent, setHoldPercent] = useState(0);
+  const [showCancelWindow, setShowCancelWindow] = useState(false);
+  const [cancelCountdown, setCancelCountdown] = useState(5);
+  
+  const [holdIntervalId, setHoldIntervalId] = useState(null);
+  const [cancelIntervalId, setCancelIntervalId] = useState(null);
+
+  // Quick Setup wizard states
+  const [showQuickSetup, setShowQuickSetup] = useState(false);
+  const [qsBloodType, setQsBloodType] = useState('O+');
+  const [qsContactName, setQsContactName] = useState('');
+  const [qsContactPhone, setQsContactPhone] = useState('');
+  const [qsContactEmail, setQsContactEmail] = useState('');
+  const [qsSubmitting, setQsSubmitting] = useState(false);
 
   // Load user status, active journey, and notifications
   const loadDashboardData = useCallback(async () => {
@@ -42,6 +59,12 @@ const Dashboard = () => {
       const notifRes = await API.get('/notifications/unread');
       if (notifRes.data.success) {
         setNotifications(notifRes.data.data);
+      }
+
+      // 3. Check if user needs quick setup
+      const profileRes = await API.get('/emergency/profile');
+      if (profileRes.data.success && profileRes.data.data.bloodType === 'Not Specified') {
+        setShowQuickSetup(true);
       }
     } catch (err) {
       console.error("Dashboard reload failed", err);
@@ -73,6 +96,7 @@ const Dashboard = () => {
 
   // SOS button handler
   const handleTriggerSOS = async () => {
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     try {
       const res = await API.post('/journeys/sos', { latitude: lat, longitude: lng });
       if (res.data.success) {
@@ -83,6 +107,66 @@ const Dashboard = () => {
     } catch (err) {
       alert("Failed to trigger SOS alert: " + (err.response?.data?.message || err.message));
     }
+  };
+
+  // SOS Hold timer logic
+  const startHold = () => {
+    if (showCancelWindow || activeSos || activeJourney?.status === 'SOS') return;
+    setIsHolding(true);
+    setHoldPercent(0);
+    if (navigator.vibrate) navigator.vibrate(50);
+
+    let pct = 0;
+    const interval = setInterval(() => {
+      pct += 4.0; // Incrementing over 2.5 - 3 seconds
+      if (pct >= 100) {
+        clearInterval(interval);
+        setIsHolding(false);
+        setHoldPercent(0);
+        if (navigator.vibrate) navigator.vibrate([150, 50, 150]);
+        enterCancelWindow();
+      } else {
+        setHoldPercent(Math.floor(pct));
+      }
+    }, 100);
+    setHoldIntervalId(interval);
+  };
+
+  const endHold = () => {
+    setIsHolding(false);
+    setHoldPercent(0);
+    if (holdIntervalId) {
+      clearInterval(holdIntervalId);
+      setHoldIntervalId(null);
+    }
+  };
+
+  const enterCancelWindow = () => {
+    setShowCancelWindow(true);
+    setCancelCountdown(5);
+
+    const interval = setInterval(() => {
+      setCancelCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setShowCancelWindow(false);
+          handleTriggerSOS();
+          return 5;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    setCancelIntervalId(interval);
+  };
+
+  const handleAbortSOS = () => {
+    if (cancelIntervalId) {
+      clearInterval(cancelIntervalId);
+      setCancelIntervalId(null);
+    }
+    setShowCancelWindow(false);
+    setCancelCountdown(5);
+    alert("SOS Dispatch Aborted.");
   };
 
   // SOS resolve handler
@@ -109,11 +193,9 @@ const Dashboard = () => {
     let nextLng = lng;
     
     if (drift) {
-      // Offset significantly to trigger ROUTE_DEVIATION
       nextLat += 0.045;
       nextLng += 0.045;
     } else {
-      // Normal walk offset
       nextLat += 0.001;
       nextLng += 0.001;
     }
@@ -145,12 +227,111 @@ const Dashboard = () => {
     }
   };
 
+  const handleQuickSetupSubmit = async (e) => {
+    e.preventDefault();
+    setQsSubmitting(true);
+    try {
+      // 1. Save profile blood group
+      await API.put('/emergency/profile', {
+        bloodType: qsBloodType,
+        allergies: "None",
+        medicalConditions: "None",
+        currentMedications: "None",
+        emergencyInstructions: "None"
+      });
+
+      // 2. Register contact
+      await API.post('/contacts', {
+        name: qsContactName,
+        phoneNumber: qsContactPhone,
+        email: qsContactEmail || 'emergency@swasuraksha.com',
+        primary: true,
+        silentEscortEnabled: true
+      });
+
+      setShowQuickSetup(false);
+      loadDashboardData();
+      alert("Emergency Quick Setup Completed!");
+    } catch (err) {
+      alert("Quick Setup failed: " + err.message);
+    } finally {
+      setQsSubmitting(false);
+    }
+  };
+
   return (
     <div className="container py-4 flex-grow-1">
+      
+      {/* Emergency Quick Setup banner */}
+      {showQuickSetup && (
+        <div className="mb-4 text-start">
+          <GlassCard className="border border-info border-opacity-40" style={{ background: 'rgba(0, 242, 254, 0.03)' }}>
+            <h5 className="text-white fw-bold d-flex align-items-center gap-2 mb-1">
+              <FiPlus className="text-cyan animate-pulse" style={{ color: '#00f2fe' }} /> {t('quickSetup')}
+            </h5>
+            <p className="text-muted small mb-4">{t('quickSetupSub')}</p>
+            
+            <form onSubmit={handleQuickSetupSubmit} className="row g-3">
+              <div className="col-md-3">
+                <label className="form-label text-muted fw-semibold small">{t('bloodGroup')}</label>
+                <select 
+                  className="form-select premium-input"
+                  value={qsBloodType}
+                  onChange={(e) => setQsBloodType(e.target.value)}
+                >
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+
+              <div className="col-md-3">
+                <label className="form-label text-muted fw-semibold small">CONTACT NAME</label>
+                <input 
+                  type="text" 
+                  className="form-control premium-input"
+                  placeholder="e.g. Mom"
+                  value={qsContactName}
+                  onChange={(e) => setQsContactName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="col-md-3">
+                <label className="form-label text-muted fw-semibold small">{t('emergencyContact')}</label>
+                <input 
+                  type="tel" 
+                  className="form-control premium-input"
+                  placeholder="e.g. +91 9999999999"
+                  value={qsContactPhone}
+                  onChange={(e) => setQsContactPhone(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="col-md-3 d-flex align-items-end">
+                <button 
+                  type="submit" 
+                  className="btn btn-premium btn-premium-cyan w-100 justify-content-center py-2"
+                  disabled={qsSubmitting}
+                >
+                  {qsSubmitting ? 'Saving...' : t('completeSetup')}
+                </button>
+              </div>
+            </form>
+          </GlassCard>
+        </div>
+      )}
+
       {/* Top greeting banner */}
       <div className="row mb-4 align-items-center">
         <div className="col-md-8 text-start">
-          <h2 className="fw-bold text-white mb-1">Welcome, {user?.fullName}</h2>
+          <h2 className="fw-bold text-white mb-1">{t('welcome')}, {user?.fullName}</h2>
           <p className="text-muted m-0">SwaSuraksha Shield is active and safeguarding your steps.</p>
         </div>
         <div className="col-md-4 text-end mt-3 mt-md-0">
@@ -167,14 +348,46 @@ const Dashboard = () => {
             
             {/* SOS Alert Panel */}
             <GlassCard className="text-center position-relative overflow-hidden">
-              <h4 className="text-white fw-bold mb-1">One-Tap Emergency SOS</h4>
-              <p className="text-muted mb-4 small">Triggering dispatches coordinates and alerts your trusted circle instantly.</p>
+              <h4 className="text-white fw-bold mb-1">{t('sosTitle')}</h4>
+              <p className="text-muted mb-4 small">{t('sosSub')}</p>
               
               {!activeSos && activeJourney?.status !== 'SOS' ? (
-                <div className="d-flex justify-content-center my-4">
-                  <div className="sos-outer-ring" onClick={handleTriggerSOS}>
-                    <div className="sos-inner-button">SOS</div>
-                  </div>
+                <div className="d-flex flex-column align-items-center my-4">
+                  {showCancelWindow ? (
+                    <div className="p-3 border border-warning border-opacity-50 rounded-4 text-center w-100" style={{ background: 'rgba(255, 193, 7, 0.08)' }}>
+                      <h5 className="text-warning fw-bold mb-1">
+                        DISPATCHING SOS IN {cancelCountdown}s...
+                      </h5>
+                      <p className="text-muted small mb-3">Tapping Abort will stop emergency alerts.</p>
+                      <button onClick={handleAbortSOS} className="btn btn-warning w-100 fw-bold">
+                        ABORT SOS DISPATCH
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div 
+                        className="sos-outer-ring" 
+                        onMouseDown={startHold}
+                        onMouseUp={endHold}
+                        onMouseLeave={endHold}
+                        onTouchStart={startHold}
+                        onTouchEnd={endHold}
+                        style={{
+                          transform: isHolding ? 'scale(0.95)' : 'scale(1)',
+                          transition: 'transform 0.15s ease',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div className="sos-inner-button d-flex flex-column justify-content-center align-items-center">
+                          <span className="fw-extrabold" style={{ fontSize: '1.4rem' }}>SOS</span>
+                          {isHolding && <span className="small text-warning" style={{ fontSize: '0.65rem' }}>{holdPercent}%</span>}
+                        </div>
+                      </div>
+                      <span className="text-muted small mt-3 fw-semibold">
+                        {isHolding ? "RELEASE TO CANCEL" : t('holdToTrigger')}
+                      </span>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="p-3 border border-danger border-opacity-50 rounded-3 my-3 text-start" style={{ background: 'rgba(255, 78, 80, 0.08)' }}>
@@ -197,7 +410,7 @@ const Dashboard = () => {
                       className="btn btn-danger w-100 mt-2 py-2 fw-bold text-white rounded-3"
                       disabled={resolvingSos}
                     >
-                      {resolvingSos ? 'Resolving...' : 'DEACTIVATE SOS & END ALERTS'}
+                      {resolvingSos ? 'Resolving...' : t('cancelSOS')}
                     </button>
                   </div>
                 </div>
@@ -237,7 +450,7 @@ const Dashboard = () => {
             <GlassCard className="text-start">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="text-white fw-bold m-0 d-flex align-items-center gap-2">
-                  <FiShield className="text-purple" style={{ color: '#9b51e0' }} /> Active Journey
+                  <FiShield className="text-purple" style={{ color: '#9b51e0' }} /> {t('activeJourney')}
                 </h5>
                 {activeJourney && (
                   <span className={`badge ${activeJourney.status === 'DEVIATED' ? 'bg-warning text-dark' : activeJourney.status === 'SOS' ? 'bg-danger text-light' : 'bg-info text-dark'}`}>
@@ -254,8 +467,13 @@ const Dashboard = () => {
                   </div>
 
                   <div className="mb-3">
-                    <span className="text-muted small fw-semibold block">AI SAFETY RATING</span>
+                    <span className="text-muted small fw-semibold block">{t('safetyScore')}</span>
                     <h6 className="text-cyan fw-bold m-0 mt-1" style={{ color: '#00f2fe' }}>{100 - activeJourney.riskScore}% Security Score</h6>
+                    
+                    {/* Confidence Disclaimer UI */}
+                    <span className="text-warning d-block my-1" style={{ fontSize: '0.68rem', opacity: '0.85' }}>
+                      ⚠️ {t('confidenceDisclaimer')}
+                    </span>
                     <p className="text-muted small m-0 mt-1">{activeJourney.safetyRouteExplanation}</p>
                   </div>
 
@@ -296,7 +514,7 @@ const Dashboard = () => {
             {/* Smart Emergency Assistance: Nearby Safe Points */}
             <GlassCard className="text-start">
               <h5 className="text-white fw-bold mb-3 d-flex align-items-center gap-2">
-                <FiMapPin className="text-cyan" style={{ color: '#00f2fe' }} /> Nearby Safety Points
+                <FiMapPin className="text-cyan" style={{ color: '#00f2fe' }} /> {t('nearbyPoints')}
               </h5>
               <p className="text-muted small mb-3">Verified support spots within range of your current location coordinates.</p>
 
