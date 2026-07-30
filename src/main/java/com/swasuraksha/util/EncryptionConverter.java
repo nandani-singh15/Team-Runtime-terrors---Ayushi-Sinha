@@ -32,7 +32,8 @@ public class EncryptionConverter implements AttributeConverter<String, String> {
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(KEY, "AES"));
             return new String(cipher.doFinal(Base64.getDecoder().decode(dbData)));
         } catch (Exception e) {
-            throw new RuntimeException("Decryption failed: " + e.getMessage(), e);
+            // Fallback for pre-existing plaintext columns: return as is
+            return dbData;
         }
     }
 }
