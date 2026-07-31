@@ -15,6 +15,7 @@ const Admin = () => {
   const [type, setType] = useState('POLICE_STATION');
   const [lat, setLat] = useState(28.6139);
   const [lng, setLng] = useState(77.2090);
+  const [phone, setPhone] = useState('');
   const [seeding, setSeeding] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -90,6 +91,7 @@ const Admin = () => {
         type,
         latitude: lat,
         longitude: lng,
+        phoneNumber: phone || '+91 112',
         averageSafetyRating: 5.0,
         totalRatings: 1
       });
@@ -97,6 +99,7 @@ const Admin = () => {
       if (res.data.success) {
         setName('');
         setDescription('');
+        setPhone('');
         setLat(28.6139);
         setLng(77.2090);
         loadAdminData();
@@ -315,6 +318,17 @@ const Admin = () => {
                   <option value="METRO_STATION">METRO STATION</option>
                   <option value="24X7_STORE">24x7 STORE</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="form-label text-muted fw-semibold small">HELPLINE PHONE</label>
+                <input 
+                  type="tel" 
+                  className="form-control premium-input"
+                  placeholder="e.g. +91 11-2301-3707"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
               </div>
 
               <div className="row">

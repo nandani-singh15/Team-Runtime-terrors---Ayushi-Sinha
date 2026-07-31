@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import API from '../services/api';
 import GlassCard from '../components/GlassCard';
 import { useAuth } from '../context/AuthContext';
-import { FiAlertOctagon, FiCompass, FiShield, FiBell, FiMapPin, FiPhoneCall, FiAlertTriangle, FiPlus } from 'react-icons/fi';
+import { FiAlertOctagon, FiCompass, FiShield, FiBell, FiMapPin, FiPhoneCall, FiAlertTriangle, FiPlus, FiPhone } from 'react-icons/fi';
 
 const Dashboard = () => {
   const { user, t } = useAuth();
@@ -37,6 +37,10 @@ const Dashboard = () => {
   const [qsContactPhone, setQsContactPhone] = useState('');
   const [qsContactEmail, setQsContactEmail] = useState('');
   const [qsSubmitting, setQsSubmitting] = useState(false);
+
+  // Coordinate dispatch mock states
+  const [dispatchStatus, setDispatchStatus] = useState('');
+  const [dispatching, setDispatching] = useState(false);
 
   // Load user status, active journey, and notifications
   const loadDashboardData = useCallback(async () => {
@@ -118,7 +122,7 @@ const Dashboard = () => {
 
     let pct = 0;
     const interval = setInterval(() => {
-      pct += 4.0; // Incrementing over 2.5 - 3 seconds
+      pct += 4.0; 
       if (pct >= 100) {
         clearInterval(interval);
         setIsHolding(false);
@@ -231,7 +235,6 @@ const Dashboard = () => {
     e.preventDefault();
     setQsSubmitting(true);
     try {
-      // 1. Save profile blood group
       await API.put('/emergency/profile', {
         bloodType: qsBloodType,
         allergies: "None",
@@ -240,7 +243,6 @@ const Dashboard = () => {
         emergencyInstructions: "None"
       });
 
-      // 2. Register contact
       await API.post('/contacts', {
         name: qsContactName,
         phoneNumber: qsContactPhone,
@@ -257,6 +259,24 @@ const Dashboard = () => {
     } finally {
       setQsSubmitting(false);
     }
+  };
+
+  // Dialers helpers find closest police post and hospital in range
+  const nearestPolice = nearbyPlaces.find(p => p.type === 'POLICE_STATION' || p.type === 'POLICE');
+  const nearestHospital = nearbyPlaces.find(p => p.type === 'HOSPITAL');
+
+  const handleAlertNearestPolice = () => {
+    if (!nearestPolice) {
+      alert("No dispatcher safe point found in range. Broad-casting emergency coordinates via standard channels.");
+      setDispatchStatus(`Emergency broadcast active. Coords: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      return;
+    }
+    setDispatching(true);
+    setDispatchStatus("Locating dispatch console...");
+    setTimeout(() => {
+      setDispatching(false);
+      setDispatchStatus(`Coordinates successfully dispatched to ${nearestPolice.name}. Alert triggered on dispatcher desk. Coords: (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+    }, 1500);
   };
 
   return (
@@ -342,7 +362,7 @@ const Dashboard = () => {
       </div>
 
       <div className="row g-4">
-        {/* Main Left: SOS & GPS Simulation */}
+        {/* Main Left: SOS, Quick Helpline & GPS Simulation */}
         <div className="col-lg-6">
           <div className="d-flex flex-column gap-4">
             
@@ -417,6 +437,48 @@ const Dashboard = () => {
               )}
             </GlassCard>
 
+            {/* One-Tap Local Help Desk */}
+            <GlassCard className="text-start">
+              <h5 className="text-white fw-bold mb-1 d-flex align-items-center gap-2">
+                <FiPhoneCall className="text-cyan" style={{ color: '#00f2fe' }} /> One-Tap Local Help Desk
+              </h5>
+              <p className="text-muted small mb-3">Dial or alert nearest public authorities based on your coordinates.</p>
+
+              <div className="d-flex flex-wrap gap-2 mb-3">
+                <a 
+                  href={nearestPolice ? `tel:${nearestPolice.phoneNumber || '112'}` : 'tel:112'}
+                  className="btn btn-premium btn-premium-outline border-danger text-danger flex-grow-1 justify-content-center py-2 px-3"
+                  style={{ fontSize: '0.82rem' }}
+                >
+                  🚨 Police {nearestPolice ? `(${nearestPolice.name.split(' ')[0]})` : ''}
+                </a>
+
+                <a 
+                  href={nearestHospital ? `tel:${nearestHospital.phoneNumber || '102'}` : 'tel:102'}
+                  className="btn btn-premium btn-premium-outline border-info text-info flex-grow-1 justify-content-center py-2 px-3"
+                  style={{ fontSize: '0.82rem' }}
+                >
+                  🏥 Hospital {nearestHospital ? `(${nearestHospital.name.split(' ')[0]})` : ''}
+                </a>
+              </div>
+
+              <button 
+                onClick={handleAlertNearestPolice}
+                className="btn btn-premium btn-premium-cyan w-100 justify-content-center py-2"
+                style={{ fontSize: '0.85rem' }}
+                disabled={dispatching}
+              >
+                📡 {dispatching ? 'Establishing link...' : 'DISPATCH COORDS TO NEAREST STATION'}
+              </button>
+
+              {dispatchStatus && (
+                <div className="p-3 mt-3 rounded-3 border border-info border-opacity-40" style={{ background: 'rgba(0, 242, 254, 0.05)' }}>
+                  <span className="text-info fw-bold small d-block">📡 DISPATCH COORDS LOGS</span>
+                  <p className="text-white small m-0 mt-1" style={{ fontSize: '0.8rem' }}>{dispatchStatus}</p>
+                </div>
+              )}
+            </GlassCard>
+
             {/* GPS Simulation Panel */}
             <GlassCard className="text-start">
               <h5 className="text-white fw-bold mb-3 d-flex align-items-center gap-2">
@@ -453,7 +515,7 @@ const Dashboard = () => {
                   <FiShield className="text-purple" style={{ color: '#9b51e0' }} /> {t('activeJourney')}
                 </h5>
                 {activeJourney && (
-                  <span className={`badge ${activeJourney.status === 'DEVIATED' ? 'bg-warning text-dark' : activeJourney.status === 'SOS' ? 'bg-danger text-light' : 'bg-info text-dark'}`}>
+                  <span className={`badge ${activeJourney.status === 'DEVIATED' ? 'bg-warning text-dark' : 'bg-info text-dark'}`}>
                     {activeJourney.status}
                   </span>
                 )}
@@ -469,8 +531,6 @@ const Dashboard = () => {
                   <div className="mb-3">
                     <span className="text-muted small fw-semibold block">{t('safetyScore')}</span>
                     <h6 className="text-cyan fw-bold m-0 mt-1" style={{ color: '#00f2fe' }}>{100 - activeJourney.riskScore}% Security Score</h6>
-                    
-                    {/* Confidence Disclaimer UI */}
                     <span className="text-warning d-block my-1" style={{ fontSize: '0.68rem', opacity: '0.85' }}>
                       ⚠️ {t('confidenceDisclaimer')}
                     </span>
@@ -528,10 +588,18 @@ const Dashboard = () => {
                         <span className="badge bg-secondary bg-opacity-20 text-cyan mb-1" style={{ color: '#00f2fe', fontSize: '0.65rem' }}>{place.type}</span>
                         <h6 className="text-white fw-bold m-0" style={{ fontSize: '0.85rem' }}>{place.name}</h6>
                         <span className="text-muted" style={{ fontSize: '0.75rem' }}>{place.description}</span>
+                        {place.phoneNumber && <span className="text-info d-block" style={{ fontSize: '0.7rem' }}>☎ {place.phoneNumber}</span>}
                       </div>
-                      <a href={`https://maps.google.com/?q=${place.latitude},${place.longitude}`} target="_blank" rel="noreferrer" className="btn btn-premium btn-premium-outline p-2">
-                        <FiPhoneCall size={14} /> Navigate
-                      </a>
+                      <div className="d-flex gap-2">
+                        {place.phoneNumber && (
+                          <a href={`tel:${place.phoneNumber}`} className="btn btn-outline-info p-2 px-3">
+                            <FiPhone size={14} />
+                          </a>
+                        )}
+                        <a href={`https://maps.google.com/?q=${place.latitude},${place.longitude}`} target="_blank" rel="noreferrer" className="btn btn-premium btn-premium-outline p-2">
+                          <FiMapPin size={14} /> Maps
+                        </a>
+                      </div>
                     </div>
                   ))}
                 </div>

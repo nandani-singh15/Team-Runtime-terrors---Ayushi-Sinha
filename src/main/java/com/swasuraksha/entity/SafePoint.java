@@ -27,6 +27,8 @@ public class SafePoint {
     private double latitude;
     private double longitude;
 
+    private String phoneNumber;
+
     private double averageSafetyRating;
     private int totalRatings;
 }

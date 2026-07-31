@@ -95,6 +95,7 @@ public class SafePointService {
                     .type("SHELTER")
                     .latitude(report.getLatitude())
                     .longitude(report.getLongitude())
+                    .phoneNumber("+91 112")
                     .averageSafetyRating(5.0)
                     .totalRatings(1)
                     .build();
