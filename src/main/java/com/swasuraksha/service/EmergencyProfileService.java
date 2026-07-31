@@ -57,7 +57,7 @@ public class EmergencyProfileService {
     private EmergencyProfile createDefaultProfile(User user) {
         String accessKey = UUID.randomUUID().toString();
         
-        String qrLink = "https://swasuraksha.vercel.app/emergency/public-card/" + accessKey;
+        String qrLink = "http://localhost:5173/emergency/public-card/" + accessKey;
         String qrBase64 = qrCodeGeneratorService.generateQrCodeBase64(qrLink, 300, 300);
 
         EmergencyProfile profile = EmergencyProfile.builder()
@@ -103,7 +103,7 @@ public class EmergencyProfileService {
         profile.setAiMedicalSummary(summary);
         profile.setUpdatedAt(LocalDateTime.now());
 
-        String qrLink = "https://swasuraksha.vercel.app/emergency/public-card/" + profile.getPublicAccessKey();
+        String qrLink = "http://localhost:5173/emergency/public-card/" + profile.getPublicAccessKey();
         String qrBase64 = qrCodeGeneratorService.generateQrCodeBase64(qrLink, 300, 300);
         profile.setQrCodeBase64(qrBase64);
 
