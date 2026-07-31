@@ -124,6 +124,8 @@ public class JourneyService {
         User user = authService.getAuthenticatedUser();
         Journey journey = journeyRepository.findFirstByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), "ACTIVE")
                 .or(() -> journeyRepository.findFirstByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), "DEVIATED"))
+                .or(() -> journeyRepository.findFirstByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), "TIMEOUT_ALERT"))
+                .or(() -> journeyRepository.findFirstByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), "SOS"))
                 .orElseThrow(() -> new RuntimeException("No active journey to complete."));
 
         journey.setStatus("COMPLETED");

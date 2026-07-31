@@ -45,7 +45,11 @@ const RouteAI = () => {
           if (active) {
             setJourney(active);
             fetchTimeline(active.id);
+          } else {
+            setJourney(null);
           }
+        } else {
+          setJourney(null);
         }
       })
       .catch((err) => console.error(err));
