@@ -4,6 +4,10 @@ SwaSuraksha (*"Feel Free to Travel"*) is a proactive, full-stack personal safety
 
 ---
 
+Contributors :
+Nandani singh
+Ayushi Sinha Saba Parveen
+
 ## 📐 Platform Architecture Diagram
 
 GitHub will automatically render the flow diagram below. It illustrates how user telemetry, AI services, database encryption, and blockchain verification modules coordinate:
