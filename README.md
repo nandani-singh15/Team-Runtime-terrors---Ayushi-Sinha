@@ -40,6 +40,34 @@ graph TD
 
 ---
 
+## 📂 Project Directory Structure
+
+```text
+swasuraksha-backend/
+├── src/main/java/com/swasuraksha/      # Spring Boot Java Backend
+│   ├── config/                         # Security & CORS filters setup
+│   ├── controller/                     # REST API Controllers (endpoints mappings)
+│   ├── dto/                            # Data Transfer Objects (Req/Res formats)
+│   ├── entity/                         # JPA Database Entities (MySQL models)
+│   ├── exception/                      # Global API Exception Handlers
+│   ├── repository/                     # Database Repository Queries
+│   ├── security/                       # Custom JWT Authentication filters
+│   ├── service/                        # Business Logic (AI, QR, Blockchain services)
+│   └── util/                           # JPA Database Encryption utilities
+├── src/test/java/com/swasuraksha/     # JUnit Integration Test suite
+├── src/main/resources/                 # application.properties & SMTP credentials
+├── frontend/                           # Vite React JS Frontend Client
+│   ├── src/
+│   │   ├── components/                 # Global UI layouts (Navbar, GlassCard)
+│   │   ├── context/                    # AuthContext (Auth & Hindi/English translations)
+│   │   ├── services/                   # Axios API settings (Interceptors)
+│   │   └── views/                      # 9 visual dashboards (Dashboard, RouteAI, Admin)
+│   └── vite.config.js                  # Frontend build configurations
+└── README.md                           # Project Documentation
+```
+
+---
+
 ## 🛠️ Technology Stack
 
 | Layer | Technology / Library | Role |
