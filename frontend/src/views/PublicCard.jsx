@@ -13,7 +13,7 @@ const PublicCard = () => {
   useEffect(() => {
     // Note: We bypass our global API Axios client because this endpoint must NOT include a JWT token in the headers
     // (since a scanning first responder does not have a user account/JWT).
-    axios.get(`http://localhost:8085/api/v1/emergency/public-card/${key}`)
+    axios.get(`http://localhost:8086/api/v1/emergency/public-card/${key}`)
       .then((res) => {
         if (res.data.success) {
           setCard(res.data.data);
